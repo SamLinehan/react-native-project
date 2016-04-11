@@ -3,89 +3,122 @@
  * https://github.com/facebook/react-native
  */
 
-import React, {
+const React = require('react-native');
+
+const {
   AppRegistry,
+  CameraRoll,
   Component,
   Image,
   SliderIOS,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
-  TouchableHighlight,
+  TouchableOpacity,
   View,
-} from 'react-native';
+} = React;
 
-var Camera = require('react-native-camera');
+const CameraRollView = require('./CameraRollView');
+
+const AssetScaledImageExampleView = require('./AssetScaledImageExample');
+
+const CAMERA_ROLL_VIEW = 'camera_roll_view';
+
 
 // class ContractHelpApp extends Component {
-var ContractHelpApp = React.createClass({
+const ContractHelpApp = React.createClass({
 
-  getInitialState: function() {
-      return {
-          cameraType: Camera.constants.Type.back
-      }
+  getInitialState(){
+    return {
+      groupTypes: 'SavedPhotos',
+      sliderValue: 1,
+      bigImages: true,
+    };
   },
 
-  render: function() {
+  render() {
     return (
-        <Camera
-            ref="cam"
-            style={styles.container}
-            type={this.state.cameraType}>
-            <View style={styles.buttonBar}>
-                <TouchableHighlight style={styles.button} onPress={this._switchCamera}>
-                    <Text style={styles.buttonText}>Flip</Text>
-                </TouchableHighlight>
-                <TouchableHighlight style={styles.button} onPress={this._takePicture}>
-                    <Text style={styles.buttonText}>Take</Text>
-                </TouchableHighlight>
-            </View>
-        </Camera>
+      // <View style={styles.container}>
+      //   <Text style={styles.welcome}>
+      //     Welcome to Contract Help! Dedicated to helping you solve all your home repair problems virtually.
+      //   </Text>
+      //   <Text style={styles.instructions}>
+      //     Press Cmd+R to reload,{'\n'}
+      //     Cmd+D or shake for dev menu
+      //   </Text>
+      // </View>
+      <View>
+        <switch
+          onValueChange={this._onSwitchChange}
+          value={this.state.bigImages} />
+        <Text>{(this.state.bigImages ? 'Big' : 'Small' + ' Images')}</Text>
+        <SliderIOS
+          value={this.state.sliderValue}
+          onValueChange={this._onSliderChange}
+        />
+        <Text>{'Group Type: ' + this.state.groupTypes}</Text>
+        <CameraRollView
+          ref={CAMERA_ROLL_VIEW}
+          batchSize={20}
+          groupTypes={this.state.groupTypes}
+          renderImage={this._renderImage}
+          />
+      </View>
     );
-},
-
-  // render() {
-  //   return (
-  //     <View style={styles.container}>
-  //       <Text style={styles.welcome}>
-  //         Welcome to Contract Help! Dedicated to helping you solve all your home repair problems virtualy.
-  //       </Text>
-  //       <Text style={styles.instructions}>
-  //         To get started, edit index.ios.js
-  //       </Text>
-  //       <Text style={styles.instructions}>
-  //         Press Cmd+R to reload,{'\n'}
-  //         Cmd+D or shake for dev menu
-  //       </Text>
-  //     </View>
-  //     <Camera
-  //       ref="cam"
-  //       style={styles.container}
-  //       type={this.state.cameraType}>
-  //       <View style={styles.buttonBar}>
-  //         <TouchableHighlight style={styles.button} onPress={this._switchCamera}>
-  //           <Text style={styles.buttonText}>Flip</Text>
-  //         </TouchableHighlight>
-  //         <TouchableHighlight style={styles.button} onPress={this._takePicture}>
-  //           <Text style={styles.buttonText}>Take</Text>
-  //         </TouchableHighlight>
-  //       </View>
-  //     </Camera>
-  //   );
-  // },
-
-  _switchCamera: function(){
-    var state = this.state;
-    state.cameraType = state.cameraType == Camera.constants.Type.back ? Camera.constants.Type.front : Camera.constants.Type.back;
-    this.setState(state);
   },
 
-  _takePicture: function(){
-    this.refs.cam.capture(function(error, data){
-      console.log(error, data);
-    })
+  loadAsset(asset){
+    if(this.props.navigator){
+      this.props.navigator.push({
+        title: 'Camera Roll Image',
+        component: AssetScaledImageExampleView,
+        backButtonTitle: 'Back',
+        passProps: {asset: asset},
+      });
+    }
+  },
+
+  _renderImage(asset){
+    const imageSize = this.state.bigImages ? 150 : 75;
+    const imageStyle = [styles.image, {width: imageSize, height: imageSize}];
+    const location = asset.node.location.longitude ?
+      JSON.stringify(asset.node.location) : "Unknown location";
+    return (
+      <TouchableOpacity key={asset} onPress={this.loadAsset.bind(this, asset)}>
+        <View style={styles.row}>
+          <Image
+            source={asset.node.image}
+            style={imageStyle}
+          />
+          <View style={styles.info}>
+            <Text style={styles.url}>{asset.node.image.uri}</Text>
+            <Text>{location}</Text>
+            <Text>{asset.node.group_name}</Text>
+            <Text>{new Date(asset.node.timestamp).toString()}</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  },
+
+  _onSliderChange(value){
+    const options = CameraRoll.groupTypesOptions;
+    const index = Math.floor(value * options.length * 0.99);
+    const groupTypes = options[index];
+    if(groupTypes !== this.state.groupTypes){
+      this.setState({groupTypes: groupTypes});
+    }
+  },
+
+  _onSwitchChange(value){
+    this.refs[CAMERA_ROLL_VIEW].rendererChanged();
+    this.setState({bigImages: value});
   }
+
 });
+// };
+
 
 const styles = StyleSheet.create({
   container: {
@@ -93,24 +126,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'transparent',
-  },
-  buttonBar: {
-    flexDirection: 'row',
-    position: 'absolute',
-    bottom: 25,
-    right: 0,
-    left: 0,
-    justifyContent: 'center'
-  },
-  button: {
-    padding: 10,
-    color: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#FFFFFF',
-    margin: 5
-  },
-  buttonText: {
-    color: '#FFFFFF'
   },
   welcome: {
     fontSize: 20,
@@ -126,6 +141,30 @@ const styles = StyleSheet.create({
     width: 53,
     height: 81,
   },
+  row: {
+    flexDirection: 'row',
+    flex: 1,
+  },
+  url: {
+    fontSize: 9,
+    marginBottom: 14,
+  },
+  image: {
+    margin: 4,
+  },
+  info: {
+    flex: 1,
+  },
 });
+
+exports.title = 'Camera Roll';
+exports.description = 'Testing Camera Roll';
+exports.examples = [
+  {
+    title: 'Photos',
+    render(): ReactElement { return <CameraRollExample />; }
+  }
+];
+
 
 AppRegistry.registerComponent('ContractHelpApp', () => ContractHelpApp);
